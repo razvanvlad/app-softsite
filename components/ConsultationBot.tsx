@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User as UserIcon, Sparkles, Loader2, Calendar, ArrowRight } from 'lucide-react';
 import { Message } from '../types';
 import { streamChatResponse } from '../services/geminiService';
+import { useAuth } from '../contexts/AuthContext';
 
 const StarterQuestion = ({ text, onClick }: { text: string, onClick: () => void }) => (
-  <button 
+  <button
     onClick={onClick}
     className="text-left p-3 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm hover:border-brand-400 hover:text-brand-600 hover:shadow-sm transition-all"
   >
@@ -14,6 +15,7 @@ const StarterQuestion = ({ text, onClick }: { text: string, onClick: () => void 
 );
 
 export const ConsultationBot: React.FC = () => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -64,20 +66,21 @@ export const ConsultationBot: React.FC = () => {
 
     try {
       await streamChatResponse(
-        [...messages, userMessage], 
-        text, 
+        [...messages, userMessage],
+        text,
         (streamedText) => {
-          setMessages(prev => prev.map(msg => 
-            msg.id === aiMessageId 
-              ? { ...msg, content: streamedText, isTyping: false } 
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessageId
+              ? { ...msg, content: streamedText, isTyping: false }
               : msg
           ));
-        }
+        },
+        user?.id
       );
     } catch (error) {
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessageId 
-          ? { ...msg, content: "I apologize, but I'm having trouble connecting to the Start-up Nation database right now. Please try again in a moment.", isTyping: false } 
+      setMessages(prev => prev.map(msg =>
+        msg.id === aiMessageId
+          ? { ...msg, content: "I apologize, but I'm having trouble connecting to the Start-up Nation database right now. Please try again in a moment.", isTyping: false }
           : msg
       ));
     } finally {
@@ -113,16 +116,16 @@ export const ConsultationBot: React.FC = () => {
           <div>
             <h2 className="font-bold text-slate-900">Start-up Consultant AI</h2>
             <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <p className="text-xs text-slate-500">Online & Ready</p>
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <p className="text-xs text-slate-500">Online & Ready</p>
             </div>
           </div>
         </div>
-        <button 
+        <button
           onClick={openBookingLink}
           className="hidden md:block px-4 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors shadow-lg"
         >
-            Book Free 15min Call
+          Book Free 15min Call
         </button>
       </div>
 
@@ -143,7 +146,7 @@ export const ConsultationBot: React.FC = () => {
                       <p className="text-slate-600 mb-4 text-sm leading-relaxed whitespace-pre-wrap">
                         {msg.content}
                       </p>
-                      <button 
+                      <button
                         onClick={openBookingLink}
                         className="inline-flex items-center justify-center w-full sm:w-auto px-5 py-2.5 bg-brand-600 text-white font-medium rounded-lg hover:bg-brand-700 transition-colors shadow-sm group"
                       >
@@ -161,46 +164,44 @@ export const ConsultationBot: React.FC = () => {
           }
 
           return (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id}
               className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-                msg.role === 'user' 
-                  ? 'bg-slate-200 text-slate-600' 
+              <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${msg.role === 'user'
+                  ? 'bg-slate-200 text-slate-600'
                   : 'bg-brand-100 text-brand-600'
-              }`}>
+                }`}>
                 {msg.role === 'user' ? <UserIcon className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
               </div>
-              
+
               <div className={`max-w-[80%] space-y-1`}>
-                  <div className={`p-4 rounded-2xl shadow-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-slate-900 text-white rounded-tr-none' 
-                      : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
+                <div className={`p-4 rounded-2xl shadow-sm ${msg.role === 'user'
+                    ? 'bg-slate-900 text-white rounded-tr-none'
+                    : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'
                   }`}>
-                     <div className="prose prose-sm max-w-none whitespace-pre-wrap leading-relaxed">
-                       {msg.content || (msg.isTyping && <span className="animate-pulse">Thinking...</span>)}
-                     </div>
+                  <div className="prose prose-sm max-w-none whitespace-pre-wrap leading-relaxed">
+                    {msg.content || (msg.isTyping && <span className="animate-pulse">Thinking...</span>)}
                   </div>
-                  <span className="text-xs text-slate-400 px-1 block">
-                      {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                  </span>
+                </div>
+                <span className="text-xs text-slate-400 px-1 block">
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           );
         })}
-        
+
         {/* Starter Questions (only show if few messages) */}
         {messages.length < 3 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 ml-12 max-w-2xl">
-                <StarterQuestion text="Am I eligible if I have an SRL from 2021?" onClick={() => handleSend("Am I eligible if I have an SRL from 2021?")} />
-                <StarterQuestion text="What budget can I get for IT equipment?" onClick={() => handleSend("What budget can I get for IT equipment?")} />
-                <StarterQuestion text="How much own contribution (co-financing) is needed?" onClick={() => handleSend("How much own contribution is needed?")} />
-                <StarterQuestion text="Can I buy an electric car with the grant?" onClick={() => handleSend("Can I buy an electric car with the grant?")} />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4 ml-12 max-w-2xl">
+            <StarterQuestion text="Am I eligible if I have an SRL from 2021?" onClick={() => handleSend("Am I eligible if I have an SRL from 2021?")} />
+            <StarterQuestion text="What budget can I get for IT equipment?" onClick={() => handleSend("What budget can I get for IT equipment?")} />
+            <StarterQuestion text="How much own contribution (co-financing) is needed?" onClick={() => handleSend("How much own contribution is needed?")} />
+            <StarterQuestion text="Can I buy an electric car with the grant?" onClick={() => handleSend("Can I buy an electric car with the grant?")} />
+          </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -216,7 +217,7 @@ export const ConsultationBot: React.FC = () => {
             disabled={isLoading}
             className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all shadow-sm placeholder:text-slate-400"
           />
-          <button 
+          <button
             onClick={() => handleSend()}
             disabled={isLoading || !inputValue.trim()}
             className="absolute right-2 p-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:hover:bg-brand-600 transition-colors"

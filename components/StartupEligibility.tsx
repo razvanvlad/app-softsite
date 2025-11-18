@@ -1,118 +1,104 @@
-
 import React, { useState } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Calculator, ShoppingBag, Loader2, PieChart } from 'lucide-react';
 import { BudgetItem } from '../types';
 import { generateBudgetPlan } from '../services/geminiService';
 import { ResponsiveContainer, PieChart as RechartsPie, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 // Step 1: Eligibility Check
-const EligibilityCheck = ({ nextStep }: { nextStep: () => void }) => {
-  const [formData, setFormData] = useState({
-    year: '2024',
-    type: 'SRL',
-    debt: 'no',
-    shareholderStatus: 'none' // 'student', 'unemployed', 'none'
-  });
+const EligibilityCheck = ({ nextStep, formData, setFormData }: { nextStep: () => void, formData: any, setFormData: (d: any) => void }) => {
+    const isEligible =
+        parseInt(formData.year) >= 2020 &&
+        formData.debt === 'no';
 
-  const isEligible = 
-    parseInt(formData.year) >= 2020 && 
-    formData.debt === 'no';
+    return (
+        <div className="space-y-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Year of Establishment</label>
+                    <select
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                        value={formData.year}
+                        onChange={e => setFormData({ ...formData, year: e.target.value })}
+                    >
+                        <option value="2025">2025 (Not established yet)</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2020">2020-2022</option>
+                        <option value="2019">Before 2020</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Company Type</label>
+                    <select
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                        value={formData.type}
+                        onChange={e => setFormData({ ...formData, type: e.target.value })}
+                    >
+                        <option value="SRL">SRL (LLC)</option>
+                        <option value="SRL-D">SRL-D</option>
+                        <option value="PFA">PFA (Sole Proprietorship)</option>
+                        <option value="SA">SA (Joint-Stock)</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Outstanding State Debts</label>
+                    <select
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                        value={formData.debt}
+                        onChange={e => setFormData({ ...formData, debt: e.target.value })}
+                    >
+                        <option value="no">No Debts</option>
+                        <option value="yes">Yes, have debts</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Shareholder Status (Majority)</label>
+                    <select
+                        className="w-full p-2 border border-slate-300 rounded-lg"
+                        value={formData.shareholderStatus}
+                        onChange={e => setFormData({ ...formData, shareholderStatus: e.target.value })}
+                    >
+                        <option value="under30">Under 30 Years Old</option>
+                        <option value="unemployed">Unemployed / Disabled</option>
+                        <option value="rural">Rural Resident</option>
+                        <option value="none">None of the above</option>
+                    </select>
+                </div>
+            </div>
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Year of Establishment</label>
-            <select 
-                className="w-full p-2 border border-slate-300 rounded-lg"
-                value={formData.year}
-                onChange={e => setFormData({...formData, year: e.target.value})}
-            >
-                <option value="2025">2025 (Not established yet)</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-                <option value="2020">2020-2022</option>
-                <option value="2019">Before 2020</option>
-            </select>
-        </div>
-        <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Company Type</label>
-             <select 
-                className="w-full p-2 border border-slate-300 rounded-lg"
-                value={formData.type}
-                onChange={e => setFormData({...formData, type: e.target.value})}
-            >
-                <option value="SRL">SRL (LLC)</option>
-                <option value="SRL-D">SRL-D</option>
-                <option value="PFA">PFA (Sole Proprietorship)</option>
-                <option value="SA">SA (Joint-Stock)</option>
-            </select>
-        </div>
-        <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Outstanding State Debts</label>
-             <select 
-                className="w-full p-2 border border-slate-300 rounded-lg"
-                value={formData.debt}
-                onChange={e => setFormData({...formData, debt: e.target.value})}
-            >
-                <option value="no">No Debts</option>
-                <option value="yes">Yes, have debts</option>
-            </select>
-        </div>
-        <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Shareholder Status (Majority)</label>
-             <select 
-                className="w-full p-2 border border-slate-300 rounded-lg"
-                value={formData.shareholderStatus}
-                onChange={e => setFormData({...formData, shareholderStatus: e.target.value})}
-            >
-                <option value="under30">Under 30 Years Old</option>
-                <option value="unemployed">Unemployed / Disabled</option>
-                <option value="rural">Rural Resident</option>
-                <option value="none">None of the above</option>
-            </select>
-        </div>
-      </div>
+            <div className={`p-4 rounded-lg border ${isEligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <div className="flex items-start">
+                    {isEligible ? <CheckCircle className="w-6 h-6 text-green-600 mr-3" /> : <XCircle className="w-6 h-6 text-red-600 mr-3" />}
+                    <div>
+                        <h3 className={`font-bold ${isEligible ? 'text-green-800' : 'text-red-800'}`}>
+                            {isEligible ? 'Preliminary Status: Eligible' : 'Preliminary Status: Not Eligible'}
+                        </h3>
+                        <p className={`text-sm mt-1 ${isEligible ? 'text-green-700' : 'text-red-700'}`}>
+                            {isEligible
+                                ? "Your company profile meets the basic requirements for Start-up Nation 2025 based on the simulated rules."
+                                : "Companies established before 2020 or those with outstanding debts are typically not eligible."}
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-      <div className={`p-4 rounded-lg border ${isEligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-        <div className="flex items-start">
-            {isEligible ? <CheckCircle className="w-6 h-6 text-green-600 mr-3" /> : <XCircle className="w-6 h-6 text-red-600 mr-3" />}
-            <div>
-                <h3 className={`font-bold ${isEligible ? 'text-green-800' : 'text-red-800'}`}>
-                    {isEligible ? 'Preliminary Status: Eligible' : 'Preliminary Status: Not Eligible'}
-                </h3>
-                <p className={`text-sm mt-1 ${isEligible ? 'text-green-700' : 'text-red-700'}`}>
-                    {isEligible 
-                        ? "Your company profile meets the basic requirements for Start-up Nation 2025 based on the simulated rules." 
-                        : "Companies established before 2020 or those with outstanding debts are typically not eligible."}
-                </p>
+            <div className="flex justify-end">
+                <button
+                    onClick={nextStep}
+                    disabled={!isEligible}
+                    className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                    Continue to Business Plan
+                </button>
             </div>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button 
-            onClick={nextStep}
-            disabled={!isEligible}
-            className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-        >
-            Continue to Business Plan
-        </button>
-      </div>
-    </div>
-  );
+    );
 };
 
 // Step 2: Business Plan Scoring
-const ScoringCalc = ({ nextStep, setIndustry }: { nextStep: () => void, setIndustry: (v: string) => void }) => {
-    const [scoreData, setScoreData] = useState({
-        green: false,
-        digital: true,
-        training: false,
-        innovation: false,
-        industry: 'IT Services'
-    });
-
+const ScoringCalc = ({ nextStep, scoreData, setScoreData, onSave }: { nextStep: () => void, scoreData: any, setScoreData: (d: any) => void, onSave: () => void }) => {
     const calculateScore = () => {
         let score = 0;
         if (scoreData.green) score += 20;
@@ -120,23 +106,25 @@ const ScoringCalc = ({ nextStep, setIndustry }: { nextStep: () => void, setIndus
         if (scoreData.training) score += 20;
         if (scoreData.innovation) score += 20;
         // Base score for eligible project
-        score += 20; 
+        score += 20;
         return score;
     };
 
     const score = calculateScore();
 
+    const handleNext = async () => {
+        await onSave();
+        nextStep();
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Proposed Business Activity (Industry)</label>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     value={scoreData.industry}
-                    onChange={(e) => {
-                        setScoreData({...scoreData, industry: e.target.value});
-                        setIndustry(e.target.value);
-                    }}
+                    onChange={(e) => setScoreData({ ...scoreData, industry: e.target.value })}
                     className="w-full p-2 border border-slate-300 rounded-lg"
                     placeholder="e.g., Bakery, Web Design, Dental Clinic"
                 />
@@ -144,42 +132,42 @@ const ScoringCalc = ({ nextStep, setIndustry }: { nextStep: () => void, setIndus
 
             <div className="space-y-3">
                 <p className="font-medium text-slate-900">Select Project Components:</p>
-                
+
                 <label className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <input 
-                        type="checkbox" 
+                    <input
+                        type="checkbox"
                         checked={scoreData.green}
-                        onChange={e => setScoreData({...scoreData, green: e.target.checked})}
+                        onChange={e => setScoreData({ ...scoreData, green: e.target.checked })}
                         className="w-5 h-5 text-brand-600 rounded focus:ring-brand-500"
                     />
                     <span className="ml-3 text-slate-700">Include Green Energy (Solar/Electric Car) - <span className="font-bold text-green-600">+20 pts</span></span>
                 </label>
 
                 <label className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <input 
-                        type="checkbox" 
+                    <input
+                        type="checkbox"
                         checked={scoreData.digital}
-                        onChange={e => setScoreData({...scoreData, digital: e.target.checked})}
+                        onChange={e => setScoreData({ ...scoreData, digital: e.target.checked })}
                         className="w-5 h-5 text-brand-600 rounded focus:ring-brand-500"
                     />
                     <span className="ml-3 text-slate-700">Include Digitalization (Hardware/Software) - <span className="font-bold text-green-600">+20 pts</span></span>
                 </label>
 
                 <label className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <input 
-                        type="checkbox" 
+                    <input
+                        type="checkbox"
                         checked={scoreData.training}
-                        onChange={e => setScoreData({...scoreData, training: e.target.checked})}
+                        onChange={e => setScoreData({ ...scoreData, training: e.target.checked })}
                         className="w-5 h-5 text-brand-600 rounded focus:ring-brand-500"
                     />
                     <span className="ml-3 text-slate-700">Include Digital Skills Training - <span className="font-bold text-green-600">+20 pts</span></span>
                 </label>
 
                 <label className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <input 
-                        type="checkbox" 
+                    <input
+                        type="checkbox"
                         checked={scoreData.innovation}
-                        onChange={e => setScoreData({...scoreData, innovation: e.target.checked})}
+                        onChange={e => setScoreData({ ...scoreData, innovation: e.target.checked })}
                         className="w-5 h-5 text-brand-600 rounded focus:ring-brand-500"
                     />
                     <span className="ml-3 text-slate-700">Include Innovation / R&D / Patents - <span className="font-bold text-green-600">+20 pts</span></span>
@@ -195,8 +183,8 @@ const ScoringCalc = ({ nextStep, setIndustry }: { nextStep: () => void, setIndus
             </div>
 
             <div className="flex justify-end">
-                <button 
-                    onClick={nextStep}
+                <button
+                    onClick={handleNext}
                     className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium"
                 >
                     Get Smart Budget Plan
@@ -227,7 +215,7 @@ const SmartBudget = ({ industry }: { industry: string }) => {
 
     const totalCost = items.reduce((acc, curr) => acc + curr.estimatedCost, 0);
     const grantLimit = 250000;
-    
+
     const chartData = items.reduce((acc: any[], curr) => {
         const existing = acc.find(a => a.name === curr.category);
         if (existing) {
@@ -251,7 +239,7 @@ const SmartBudget = ({ industry }: { industry: string }) => {
                     <p className="text-slate-500 max-w-md mx-auto mb-6">
                         Generate a compliant list of eligible equipment and software for a <strong>{industry}</strong> business.
                     </p>
-                    <button 
+                    <button
                         onClick={handleGenerate}
                         disabled={loading}
                         className="px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium inline-flex items-center shadow-lg shadow-brand-500/30"
@@ -306,10 +294,10 @@ const SmartBudget = ({ industry }: { industry: string }) => {
                             </table>
                         </div>
                         {totalCost > grantLimit && (
-                             <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-center">
+                            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm flex items-center">
                                 <AlertTriangle className="w-4 h-4 mr-2" />
                                 Warning: Total exceeds the 250,000 RON grant limit. You will need to cover the difference.
-                             </div>
+                            </div>
                         )}
                     </div>
 
@@ -332,7 +320,7 @@ const SmartBudget = ({ industry }: { industry: string }) => {
                                         ))}
                                     </Pie>
                                     <Tooltip formatter={(value) => `${value.toLocaleString()} RON`} />
-                                    <Legend verticalAlign="bottom" height={36}/>
+                                    <Legend verticalAlign="bottom" height={36} />
                                 </RechartsPie>
                             </ResponsiveContainer>
                         </div>
@@ -341,7 +329,7 @@ const SmartBudget = ({ industry }: { industry: string }) => {
                                 <span className="text-slate-600">Grant Limit:</span>
                                 <span className="font-mono">250,000 RON</span>
                             </div>
-                             <div className="flex justify-between p-2 bg-slate-50 rounded">
+                            <div className="flex justify-between p-2 bg-slate-50 rounded">
                                 <span className="text-slate-600">Remaining:</span>
                                 <span className="font-mono font-bold text-slate-900">
                                     {Math.max(0, 250000 - totalCost).toLocaleString()} RON
@@ -356,8 +344,47 @@ const SmartBudget = ({ industry }: { industry: string }) => {
 };
 
 export const StartupEligibility: React.FC = () => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState(1);
-    const [industry, setIndustry] = useState('General');
+
+    // Lifted State
+    const [formData, setFormData] = useState({
+        year: '2024',
+        type: 'SRL',
+        debt: 'no',
+        shareholderStatus: 'none'
+    });
+
+    const [scoreData, setScoreData] = useState({
+        green: false,
+        digital: true,
+        training: false,
+        innovation: false,
+        industry: 'IT Services'
+    });
+
+    const saveResults = async () => {
+        if (!user) return;
+
+        const isEligible = parseInt(formData.year) >= 2020 && formData.debt === 'no';
+        let score = 20; // Base
+        if (scoreData.green) score += 20;
+        if (scoreData.digital) score += 20;
+        if (scoreData.training) score += 20;
+        if (scoreData.innovation) score += 20;
+
+        try {
+            await supabase.from('eligibility_checks').insert({
+                user_id: user.id,
+                is_eligible: isEligible,
+                score: score,
+                details: { ...formData, ...scoreData }
+            });
+            console.log("Eligibility saved");
+        } catch (error) {
+            console.error("Error saving eligibility:", error);
+        }
+    };
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -371,29 +398,26 @@ export const StartupEligibility: React.FC = () => {
             {/* Progress Steps */}
             <div className="flex items-center justify-between relative">
                 <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-200 -z-10" />
-                
-                <button 
+
+                <button
                     onClick={() => setActiveTab(1)}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${
-                        activeTab >= 1 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
-                    }`}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${activeTab >= 1 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
+                        }`}
                 >1</button>
-                
-                <button 
+
+                <button
                     onClick={() => activeTab >= 2 && setActiveTab(2)}
-                     className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${
-                        activeTab >= 2 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
-                    }`}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${activeTab >= 2 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
+                        }`}
                 >2</button>
-                
-                <button 
-                     onClick={() => activeTab >= 3 && setActiveTab(3)}
-                     className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${
-                        activeTab >= 3 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
-                    }`}
+
+                <button
+                    onClick={() => activeTab >= 3 && setActiveTab(3)}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-colors ${activeTab >= 3 ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-500'
+                        }`}
                 >3</button>
             </div>
-            
+
             <div className="flex justify-between text-xs text-slate-500 font-medium px-1">
                 <span>Company Details</span>
                 <span>Business Plan</span>
@@ -401,9 +425,22 @@ export const StartupEligibility: React.FC = () => {
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8 min-h-[400px]">
-                {activeTab === 1 && <EligibilityCheck nextStep={() => setActiveTab(2)} />}
-                {activeTab === 2 && <ScoringCalc nextStep={() => setActiveTab(3)} setIndustry={setIndustry} />}
-                {activeTab === 3 && <SmartBudget industry={industry} />}
+                {activeTab === 1 && (
+                    <EligibilityCheck
+                        nextStep={() => setActiveTab(2)}
+                        formData={formData}
+                        setFormData={setFormData}
+                    />
+                )}
+                {activeTab === 2 && (
+                    <ScoringCalc
+                        nextStep={() => setActiveTab(3)}
+                        scoreData={scoreData}
+                        setScoreData={setScoreData}
+                        onSave={saveResults}
+                    />
+                )}
+                {activeTab === 3 && <SmartBudget industry={scoreData.industry} />}
             </div>
         </div>
     );
